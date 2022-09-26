@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: google_sheets_parser
+    image: google_sheets_parser:1.0
+    env_file:
+      - ./.env

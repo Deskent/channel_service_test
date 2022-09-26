@@ -1,0 +1,7 @@
+gspread==5.5.0
+xmltodict==0.13.0
+# peewee==3.14.8
+# psycopg2==2.9.3
+# pydantic==1.9.1
+# google-api-python-client==2.62.0
+# python-dotenv==0.19.2
