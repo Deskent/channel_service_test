@@ -10,8 +10,6 @@ def update_orders(token_filepath: str):
     """Get data from Google, send messages with expired orders,
     Update DB"""
 
-    from channel.models import ChannelOrder
-
     parser = SheetsParser(
         currency='USD',
         google_token_filename=token_filepath
@@ -19,12 +17,18 @@ def update_orders(token_filepath: str):
     orders: list[dict] = parser.get_data()
     expired_orders: tuple[str] = _get_expired_orders(orders)
     _send_report(expired_orders)
+    _update_database(orders)
+
+
+def _update_database(orders: list[dict]):
+    from channel.models import ChannelOrder
+
     fields: list[int] = [elem['order_number'] for elem in orders]
     orders: list[ChannelOrder] = [ChannelOrder(**elem) for elem in orders]
     ChannelOrder.objects.bulk_create(
         objs=orders,
         update_conflicts=True,
-        update_fields=['usd_cost', 'rubles_cost'],
+        update_fields=['usd_cost', 'rubles_cost', 'serial_number', 'transfer_date'],
         unique_fields=['order_number']
     )
     ChannelOrder.objects.exclude(order_number__in=fields).delete()
