@@ -18,7 +18,7 @@ def update_orders(token_filepath: str):
     )
     orders: list[dict] = parser.get_data()
     expired_orders: tuple[str] = _get_expired_orders(orders)
-    _send_report(expired_orders)
+    # _send_report(expired_orders)
     fields: list[int] = [elem['order_number'] for elem in orders]
     orders: list[ChannelOrder] = [ChannelOrder(**elem) for elem in orders]
     ChannelOrder.objects.bulk_create(

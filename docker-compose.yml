@@ -48,3 +48,14 @@ services:
              gunicorn --env DJANGO_SETTINGS_MODULE=channel_test.settings -b 0.0.0.0:8000 -w 1 channel_test.wsgi"
     ports:
       - "8000:8000"
+    volumes:
+      - ./nginx_config/static:/static
+  nginx:
+    image: nginx
+    container_name: nginx
+    hostname: nginx
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx_config/config:/etc/nginx/conf.d
+      - ./nginx_config/static:/static

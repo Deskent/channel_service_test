@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+
 admin_name = 'channel_admin'
 admin_password = 'channel_password'
 if not User.objects.filter(username=admin_name).first():
