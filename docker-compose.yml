@@ -1,9 +1,50 @@
 version: '3.9'
 
 services:
+  postgres:
+    env_file:
+      - ./.env
+    container_name: postgres
+    hostname: postgres
+    image: postgres:14.4-alpine
+    command:
+      - "postgres"
+      - "-c"
+      - "log_destination=stderr"
+      - "-c"
+      - "logging_collector=on"
+      - "-c"
+      - "log_directory=/var/lib/postgresql/data/pg_log"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=512MB"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    restart: on-failure
+    volumes:
+      - ./postgres_db/postgres/postgresql-data:/var/lib/postgresql/data
+      - ./postgres_db/postgres/pginit/:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
   app:
-    build: .
+    build: ./channel_test
     container_name: google_sheets_parser
     image: google_sheets_parser:1.0
     env_file:
       - ./.env
+    links:
+      - postgres
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py shell < createadmin.py &&
+             gunicorn --env DJANGO_SETTINGS_MODULE=channel_test.settings -b 0.0.0.0:8000 -w 1 channel_test.wsgi"
+    ports:
+      - "8000:8000"

@@ -1,5 +1,7 @@
 *.sh
-token.json
+.editorconfig
+
+channel_test/channel/utils/token.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

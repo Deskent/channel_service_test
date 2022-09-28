@@ -1,0 +1,12 @@
+{% extends 'channel_test/base.html' %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <ul>
+        {% for elem in data %}
+            <li>
+                {{ elem.serial_number }} {{ elem.order_number }} {{ elem.usd_cost }} {{ elem.rubles_cost }} {{ elem.transfer_date }}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

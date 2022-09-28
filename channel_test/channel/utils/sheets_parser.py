@@ -1,10 +1,15 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import gspread
 from gspread import Worksheet, Spreadsheet, Client
 import requests
 import xmltodict
+
+from config import settings
+
+SHEET_URL = settings.SHEET_URL
+# SHEET_URL = 'https://docs.google.com/spreadsheets/d/153fuB1T1f-JiU_LVzU8Pc3MlxtdMqwm-cd0GcEydPRs'
 
 
 class SheetsParser:
@@ -14,24 +19,31 @@ class SheetsParser:
 
     Attributes
 
-        currency: str
-            Currency for getting exchange rate
+        currency: str = 'USD'
+            Currency for getting exchange rate, default = 'USD'
 
-        sheet_url: str
-            URL to Google Sheet
+        sheet_url: str = settings.SHEET_URL
+            URL to Google Sheet, default from .env field SHEET_URL
 
         google_token_filename: str = 'token.json'
             Filepath to file with Google Sheet access token
 
     Methods
         get_data
+
         get_google_datalist
+
         get_exchange_rate
     """
 
-    def __init__(self, currency: str, sheet_url: str, google_token_filename: str = 'token.json'):
+    def __init__(
+            self,
+            currency: str = 'USD',
+            sheet_url: str = '',
+            google_token_filename: str = 'token.json'
+    ):
         self.currency: str = currency
-        self.sheet_url: str = sheet_url
+        self.sheet_url: str = sheet_url or SHEET_URL
         self.google_token_filename: str = google_token_filename
 
     def get_data(self) -> list[dict]:
@@ -43,13 +55,13 @@ class SheetsParser:
 
         google_data: list[dict] = self.get_google_datalist()
         exchange_rate: Decimal = self.get_exchange_rate()
-        updated_data: list[dict] = self.__update_with_exchange_rate(google_data, exchange_rate)
+        updated_data: list[dict] = self.__update_keys_and_add_exchanged_field(google_data, exchange_rate)
 
         return updated_data
 
     def get_google_datalist(self) -> list[dict]:
         """
-        Returns parsed data from google sheet
+        Returns parsed data from Google Sheet
 
         :return: Parsed data list[dict]
         """
@@ -79,8 +91,8 @@ class SheetsParser:
         answer: str = response.text
         if currency in answer:
             parsed_data: dict[str, dict] = xmltodict.parse(answer)
-            data: list[dict] = parsed_data['ValCurs']['Valute']
-            for elem in data:
+            valutes: tuple[dict] = tuple(parsed_data['ValCurs']['Valute'])
+            for elem in valutes:
                 if elem['CharCode'] == currency:
                     value: str = elem.get('Value').replace(',', '.')
 
@@ -89,10 +101,11 @@ class SheetsParser:
         raise ValueError("Currency not found")
 
     @staticmethod
-    def __update_with_exchange_rate(
-            data: list[dict],
-            exchange_rate: Decimal,
-            name: str = 'стоимость,руб'
+    def __get_valid_date_format(transfer_date: str) -> str:
+        return str(datetime.strptime(transfer_date, '%d.%m.%Y').date())
+
+    def __update_keys_and_add_exchanged_field(
+            self, data: list[dict], exchange_rate: Decimal
     ) -> list[dict]:
 
         """Returns updated list of dictionaries
@@ -101,13 +114,23 @@ class SheetsParser:
         :return: Updated list[dict]
         """
 
-        result = data[:]
-        for elem in result:
-            usd_price: int = int(elem['стоимость,$'])
+        orders = data[:]
+        for order in orders:
+            order['serial_number'] = order.pop('№')
+            order['order_number'] = order.pop('заказ №')
+            order['usd_cost'] = order.pop('стоимость,$')
+            order['transfer_date'] = self.__get_valid_date_format(order.pop('срок поставки'))
+            usd_price: int = int(order['usd_cost'])
             rubles_price: Decimal = usd_price * exchange_rate
-            elem[name] = rubles_price.to_eng_string()
+            order['rubles_cost'] = rubles_price.to_eng_string()
 
-        return result
+        return orders
 
 
-
+if __name__ == '__main__':
+    token_filepath = 'token.json'
+    parser = SheetsParser(
+        currency='USD',
+        google_token_filename=token_filepath
+    )
+    orders: list[dict] = parser.get_data()

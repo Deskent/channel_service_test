@@ -1,5 +1,5 @@
 .*
-Dockerfile
+channel_test/Dockerfile
 README.md
 docker-compose.yml
 *.sh
