@@ -9,7 +9,6 @@ import xmltodict
 from config import settings
 
 SHEET_URL = settings.SHEET_URL
-# SHEET_URL = 'https://docs.google.com/spreadsheets/d/153fuB1T1f-JiU_LVzU8Pc3MlxtdMqwm-cd0GcEydPRs'
 
 
 class SheetsParser:
@@ -54,8 +53,10 @@ class SheetsParser:
         """
 
         google_data: list[dict] = self.get_google_datalist()
-        exchange_rate: Decimal = self.get_exchange_rate()
-        updated_data: list[dict] = self.__update_keys_and_add_exchanged_field(google_data, exchange_rate)
+        exchange_rate: 'Decimal' = self.get_exchange_rate()
+        updated_data: list[dict] = self.__update_keys_and_add_exchanged_field(
+            google_data, exchange_rate
+        )
 
         return updated_data
 
@@ -74,11 +75,11 @@ class SheetsParser:
 
         return worksheet_data
 
-    def get_exchange_rate(self, currency: str = '') -> Decimal:
+    def get_exchange_rate(self, currency: str = '') -> 'Decimal':
         """
         Returns current currency value from CBR API
 
-        :return: (Decimal) Rounded value
+        :return: (Decimal) Rounded to 2-nd digit value
         """
 
         if not currency:
@@ -91,8 +92,8 @@ class SheetsParser:
         answer: str = response.text
         if currency in answer:
             parsed_data: dict[str, dict] = xmltodict.parse(answer)
-            valutes: tuple[dict] = tuple(parsed_data['ValCurs']['Valute'])
-            for elem in valutes:
+            currencies: tuple[dict] = tuple(parsed_data['ValCurs']['Valute'])
+            for elem in currencies:
                 if elem['CharCode'] == currency:
                     value: str = elem.get('Value').replace(',', '.')
 
@@ -102,14 +103,20 @@ class SheetsParser:
 
     @staticmethod
     def __get_valid_date_format(transfer_date: str) -> str:
+        """Returns string with date in datetime object format"""
+
         return str(datetime.strptime(transfer_date, '%d.%m.%Y').date())
 
     def __update_keys_and_add_exchanged_field(
-            self, data: list[dict], exchange_rate: Decimal
+            self,
+            data: list[dict],
+            exchange_rate: Decimal
     ) -> list[dict]:
 
         """Returns updated list of dictionaries
-        with current exchange rate for every element
+        with current exchange rate for every element.
+        Change keys to database model fields names.
+        Replace date for transfer_date field to datetime format.
 
         :return: Updated list[dict]
         """
@@ -125,12 +132,3 @@ class SheetsParser:
             order['rubles_cost'] = rubles_price.to_eng_string()
 
         return orders
-
-
-if __name__ == '__main__':
-    token_filepath = 'token.json'
-    parser = SheetsParser(
-        currency='USD',
-        google_token_filename=token_filepath
-    )
-    orders: list[dict] = parser.get_data()

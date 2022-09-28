@@ -2,11 +2,28 @@
 
 {% block content %}
     <h1>{{ title }}</h1>
-    <ul>
+
+    <table class="table table-success table-striped">
+        <thead>
+        <tr>
+            <th scope="col">№</th>
+            <th scope="col">Номер заказа</th>
+            <th scope="col">стоимость,$</th>
+            <th scope="col">стоимость,руб</th>
+            <th scope="col">дата поставки</th>
+        </tr>
+        </thead>
+
+        <tbody>
         {% for elem in data %}
-            <li>
-                {{ elem.serial_number }} {{ elem.order_number }} {{ elem.usd_cost }} {{ elem.rubles_cost }} {{ elem.transfer_date }}
-            </li>
+            <tr>
+                <td>{{ elem.serial_number }}</td>
+                <td>{{ elem.order_number }}</td>
+                <td>{{ elem.usd_cost }}</td>
+                <td>{{ elem.rubles_cost }}</td>
+                <td>{{ elem.transfer_date | date:"d.m.Y" }}</td>
+            </tr>
         {% endfor %}
-    </ul>
+        </tbody>
+    </table>
 {% endblock %}
