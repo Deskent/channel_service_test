@@ -14,27 +14,29 @@ def update_orders(token_filepath: str):
         currency='USD',
         google_token_filename=token_filepath
     )
-    orders: list[dict] = parser.get_data()
+    orders: tuple[dict] = parser.get_data()
     expired_orders: tuple[str] = _get_expired_orders(orders)
     _send_report(expired_orders)
     _update_database(orders)
 
 
-def _update_database(orders: list[dict]):
+def _update_database(orders: tuple[dict]) -> None:
+    """Update database with new data"""
+
     from channel.models import ChannelOrder
 
-    fields: list[int] = [elem['order_number'] for elem in orders]
-    orders: list[ChannelOrder] = [ChannelOrder(**elem) for elem in orders]
+    orders_to_delete: tuple[int] = tuple(int(elem['order_number']) for elem in orders)
+    orders_to_update: tuple[ChannelOrder] = tuple(ChannelOrder(**elem) for elem in orders)
     ChannelOrder.objects.bulk_create(
-        objs=orders,
+        objs=orders_to_update,
         update_conflicts=True,
         update_fields=['usd_cost', 'rubles_cost', 'serial_number', 'transfer_date'],
         unique_fields=['order_number']
     )
-    ChannelOrder.objects.exclude(order_number__in=fields).delete()
+    ChannelOrder.objects.exclude(order_number__in=orders_to_delete).delete()
 
 
-def _get_expired_orders(orders: list[dict]) -> tuple[str]:
+def _get_expired_orders(orders: tuple[dict]) -> tuple[str]:
     """Returns tuple of expired order numbers"""
 
     return tuple(
@@ -44,7 +46,7 @@ def _get_expired_orders(orders: list[dict]) -> tuple[str]:
     )
 
 
-def send_message_to_user(bot_token: str, telegram_id: int, text: str) -> None:
+def send_message_to_telegram(bot_token: str, telegram_id: int, text: str) -> None:
     """
     Sends the message to user telegram id using bot token
     """
@@ -58,10 +60,9 @@ def _send_report(orders: tuple[str], step: int = 30) -> None:
 
     length: int = len(orders)
     for shift in range(0, length, step):
-        orders_slice: tuple[str] = orders[shift:shift + step]
-        order_string: str = '\n'.join(orders_slice)
+        order_string: str = '\n'.join(orders[shift:shift + step])
         text = f'Expired orders: \n{order_string}'
-        send_message_to_user(
+        send_message_to_telegram(
             bot_token=settings.TELEBOT_TOKEN,
             telegram_id=settings.ADMIN_TELEGRAM_ID,
             text=text

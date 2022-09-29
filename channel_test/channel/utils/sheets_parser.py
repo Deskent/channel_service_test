@@ -45,7 +45,7 @@ class SheetsParser:
         self.sheet_url: str = sheet_url or SHEET_URL
         self.google_token_filename: str = google_token_filename
 
-    def get_data(self) -> list[dict]:
+    def get_data(self) -> tuple[dict]:
         """Returns parsed data from Google Sheets with adding
         current exchange rate for every record
 
@@ -54,7 +54,7 @@ class SheetsParser:
 
         google_data: list[dict] = self.get_google_datalist()
         exchange_rate: 'Decimal' = self.get_exchange_rate()
-        updated_data: list[dict] = self.__update_keys_and_add_exchanged_field(
+        updated_data: tuple[dict] = self.__update_keys_and_add_exchanged_field(
             google_data, exchange_rate
         )
 
@@ -111,14 +111,16 @@ class SheetsParser:
             self,
             data: list[dict],
             exchange_rate: Decimal
-    ) -> list[dict]:
+    ) -> tuple[dict]:
 
         """Returns updated list of dictionaries
         with current exchange rate for every element.
+
         Change keys to database model fields names.
+
         Replace date for transfer_date field to datetime format.
 
-        :return: Updated list[dict]
+        :return: Updated tuple[dict]
         """
 
         orders = data[:]
@@ -131,4 +133,4 @@ class SheetsParser:
             rubles_price: Decimal = usd_price * exchange_rate
             order['rubles_cost'] = rubles_price.to_eng_string()
 
-        return orders
+        return tuple(orders)
